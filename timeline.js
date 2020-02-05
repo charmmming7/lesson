@@ -100,13 +100,22 @@ const article = page.querySelector('article');
 let grid = article.children[0].firstElementChild; //빈 템플릿 (12개 아이템 감싸는)
 let loading = article.children[1].firstElementChild;
 let more = article.children[2].firstElementChild;
+let load_all = article.children[2].lastElementChild;
 let p = 1;
 
 // 1페이지 호출 후 p가 2로 늘어남 (1만큼) - 증가연산은 값 평가 이후 수행됨
-console.log('>> p: ', p);
-console.log('>> totalPage: ', totalPage);
+// console.log('>> p: ', p);
+// console.log('>> totalPage: ', totalPage);
+if(p === totalPage){
+    more.parentElement.style.display = 'none';
+    loading.parentElement.style.display = 'none';
+}
 const timelineList = await fetchApiData(url, p++);
+// console.log(typeof timelineList) //object. list아닌가
 await divideList(timelineList);
+
+// callList(timelineList, p); 첫페이지도 이렇게 부르고 싶은데, fetchApiData(url, p++) 여기서 바로 p=2가 되버려서 2페이지를 불러오게됨
+
 
 // 1페이지와 그 이후 페이지를 불러오는 기능을 한 함수로 같이 쓸순 없을까?
 // 더보기 클릭하면 수행할 함수
@@ -119,7 +128,6 @@ async function callList(timelineList, p){
         console.log(timelineList)
 
         await divideList(timelineList);
-        
     }catch(e){
         console.error(e);
     }
@@ -158,19 +166,17 @@ async function divideList(timelineList){
     });
 }
 
-
 // 로딩바, 더보기버튼
 more.parentElement.style.display = '';
 loading.parentElement.style.display = 'none';
 
 const clickMore = function(e) {
-    if(p > totalPage){
-        alert('마지막 장입니다!')
-        // 필요한 시점에 로딩바(의 부모 래퍼div), 더보기버튼(의 부모 래퍼div) display: none; 제거
+    // 다음페이지 존재 검사를 버튼클릭 이벤트에서 하는게 좋을지, callList()안에서 하는게 좋을지?
+    if(p === totalPage){
+        // 마지막장일때
+        more.removeEventListener('click', clickMore);
         more.parentElement.style.display = 'none';
         loading.parentElement.style.display = 'none';
-        // 추가한 더보기 이벤트리스너 제거
-        more.removeEventListener('click', clickMore);
     }else{
         loading.parentElement.style.display = 'inline-block';
         callList(timelineList, p++);
@@ -179,7 +185,25 @@ const clickMore = function(e) {
 }
 more.addEventListener('click', clickMore);
 
+//전체보기
+const totalList = []; 
+const loadAll = function(e) {
+    loading.parentElement.style.display = 'inline-block';
+    for(var i = p+1; i<=totalPage; i++){
+        // const result = callList(timelineList, i);
+        // totalList.push(result);
+        // console.log(i, totalList[i])
+        callList(timelineList, i);
+    }
+    more.parentElement.style.display = 'none';
+    loading.parentElement.style.display = 'none';
+}
+load_all.addEventListener('click', loadAll);
+
+
+
 })();
 
 
 // 내부규약에 따라 totalPage 취득?
+// 1페이지 렌더링과 totalPage 취득 페러럴하게 프로세싱?
