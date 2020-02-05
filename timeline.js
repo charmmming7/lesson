@@ -103,69 +103,83 @@ let more = article.children[2].firstElementChild;
 let p = 1;
 
 // 1페이지 호출 후 p가 2로 늘어남 (1만큼) - 증가연산은 값 평가 이후 수행됨
+console.log('>> p: ', p);
+console.log('>> totalPage: ', totalPage);
 const timelineList = await fetchApiData(url, p++);
-console.log(p + "p ", timelineList)
+await divideList(timelineList);
 
 // 1페이지와 그 이후 페이지를 불러오는 기능을 한 함수로 같이 쓸순 없을까?
 // 더보기 클릭하면 수행할 함수
 async function callList(timelineList, p){
     try{
-        if(p > totalPage){
-            alert('마지막 장입니다!')
-        }else{
-            timelineList = await fetchApiData(url, p);
-            console.log(p + "p ", timelineList)
-            return timelineList;
-        }
+        console.log('>> p: ', p);
+        console.log('>> totalPage: ', totalPage);
+
+        timelineList = await fetchApiData(url, p);
+        console.log(timelineList)
+
+        await divideList(timelineList);
+        
     }catch(e){
         console.error(e);
     }
 }
 
-const divide = function(list, size) {
-    const copy = list.slice();
-    const cnt = Math.floor(copy.length / size);
-
-    const listList = [];
-    for(let i = 0; i < cnt; i++) {
-        listList.push(copy.splice(0, size));
-    }
-    return listList;
-};
-const listList = divide(timelineList, 3);
-listList.forEach(list => {
-    grid.insertAdjacentHTML('beforeend', `
-        <div class="Nnq7C weEfm">
-        </div>
-    `);
-    let row = grid.lastElementChild;
-
-    list.forEach(data => {
-        row.insertAdjacentHTML('beforeend', `
-            <div class="v1Nh3 kIKUG _bz0w">
-                <a href="javascript:;">
-                    <div class="eLAPa">
-                        <div class="KL4Bh"><img class="FFVAD" decoding="auto" src="${IMG_PATH}${data.img}" style="object-fit: cover;"></div>
-                    </div>
-                </a>
+async function divideList(timelineList){
+    const divide = function(list, size) {
+        const copy = list.slice();
+        const cnt = Math.floor(copy.length / size);
+    
+        const listList = [];
+        for(let i = 0; i < cnt; i++) {
+            listList.push(copy.splice(0, size));
+        }
+        return listList;
+    };
+    const listList = divide(timelineList, 3);
+    listList.forEach(list => {
+        grid.insertAdjacentHTML('beforeend', `
+            <div class="Nnq7C weEfm">
             </div>
         `);
+        let row = grid.lastElementChild;
+    
+        list.forEach(data => {
+            row.insertAdjacentHTML('beforeend', `
+                <div class="v1Nh3 kIKUG _bz0w">
+                    <a href="javascript:;">
+                        <div class="eLAPa">
+                            <div class="KL4Bh"><img class="FFVAD" decoding="auto" src="${IMG_PATH}${data.img}" style="object-fit: cover;"></div>
+                        </div>
+                    </a>
+                </div>
+            `);
+        });
     });
-});
+}
 
 
-// 필요한 시점에 로딩바(의 부모 래퍼div), 더보기버튼(의 부모 래퍼div) display: none; 제거
+// 로딩바, 더보기버튼
 more.parentElement.style.display = '';
-// more.parentElement.style.display = 'none';
-loading.parentElement.style.display = '';
-// loading.parentElement.style.display = 'none';
-console.log('>> p: ', p);
-console.log('>> totalPage: ', totalPage);
+loading.parentElement.style.display = 'none';
 
 const clickMore = function(e) {
-    const result = callList(timelineList, p++);
+    if(p > totalPage){
+        alert('마지막 장입니다!')
+        // 필요한 시점에 로딩바(의 부모 래퍼div), 더보기버튼(의 부모 래퍼div) display: none; 제거
+        more.parentElement.style.display = 'none';
+        loading.parentElement.style.display = 'none';
+        // 추가한 더보기 이벤트리스너 제거
+        more.removeEventListener('click', clickMore);
+    }else{
+        loading.parentElement.style.display = 'inline-block';
+        callList(timelineList, p++);
+        loading.parentElement.style.display = 'none';
+    }
 }
-// 필요한 시점에 추가한 이벤트리스너 제거
 more.addEventListener('click', clickMore);
-// more.removeEventListener('click', clickMore);
+
 })();
+
+
+// 내부규약에 따라 totalPage 취득?
