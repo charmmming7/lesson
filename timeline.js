@@ -110,29 +110,29 @@ if(p === totalPage){
     more.parentElement.style.display = 'none';
     loading.parentElement.style.display = 'none';
 }
-const timelineList = await fetchApiData(url, p++);
+// const timelineList = await fetchApiData(url, p++);
+/* COMMENT 배열은 내부적으로 Array객체이고, typeof 연산시 'object'로 평가됩니다
+https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Operators/typeof */
 // console.log(typeof timelineList) //object. list아닌가
-await divideList(timelineList);
-
+// await divideList(timelineList);
+callList(p++);
 // callList(timelineList, p); 첫페이지도 이렇게 부르고 싶은데, fetchApiData(url, p++) 여기서 바로 p=2가 되버려서 2페이지를 불러오게됨
 
 
+// COMMENT 통합 했습니다
 // 1페이지와 그 이후 페이지를 불러오는 기능을 한 함수로 같이 쓸순 없을까?
 // 더보기 클릭하면 수행할 함수
-async function callList(timelineList, p){
+async function callList(p){
     try{
         console.log('>> p: ', p);
         console.log('>> totalPage: ', totalPage);
-
-        timelineList = await fetchApiData(url, p);
-        console.log(timelineList)
-
-        await divideList(timelineList);
+        await divideList(await fetchApiData(url, p));
     }catch(e){
         console.error(e);
     }
 }
 
+// FIXME 비동기로직이 없는데, 불필요한 async를 걸고 있습니다
 async function divideList(timelineList){
     const divide = function(list, size) {
         const copy = list.slice();
@@ -170,33 +170,44 @@ async function divideList(timelineList){
 more.parentElement.style.display = '';
 loading.parentElement.style.display = 'none';
 
-const clickMore = function(e) {
+const clickMore = async function(e) {
+    /* COMMENT 페이징을 수행하는 함수를 분리하고, 해당함수 안에서 해주세요
+    clickMore는 단순히 이벤트리스너 함수입니다 */
     // 다음페이지 존재 검사를 버튼클릭 이벤트에서 하는게 좋을지, callList()안에서 하는게 좋을지?
+    // BUG 마지막 페이지 제대로 동작하지 않습니다, API호출 이후에 체크 해주세요
     if(p === totalPage){
         // 마지막장일때
         more.removeEventListener('click', clickMore);
         more.parentElement.style.display = 'none';
         loading.parentElement.style.display = 'none';
+        // 완료이후에 이벤트리스너 떼주세요
     }else{
-        loading.parentElement.style.display = 'inline-block';
-        callList(timelineList, p++);
+    /* BUG 로딩바 노출되지 않습니다, 더보기버튼 눌러도 숨겨지지 않습니다
+    비동기 로직을 동기로 실행시키기 위해 await 걸어서 픽스 했습니다 */
+        loading.parentElement.style.display = '';
+        await callList(p++);
         loading.parentElement.style.display = 'none';
     }
 }
 more.addEventListener('click', clickMore);
 
 //전체보기
-const totalList = []; 
-const loadAll = function(e) {
-    loading.parentElement.style.display = 'inline-block';
-    for(var i = p+1; i<=totalPage; i++){
+const loadAll = async function(e) {
+    // TODO 버튼숨김은 누른 순간에 하는 게 더 맞는 것 같습니다
+    more.parentElement.style.display = 'none';
+    loading.parentElement.style.display = '';
+    /* BUG 2페이지가 3페이지 보다 응답이 먼저 온다는 보장이 없으며, 현재는 페이지가 섞일 수 있습니다
+    요청순서에 따른 응답순서 보장받을 수 있도록 비동기로 수행 해주세요 */
+    // COMMENT 불필요한 참조변수 제거 했습니다, 의미상 for 보다는 while이 맞아서 수정 했습니다
+    // BUG 한 페이지 뛰어넘는 버그 픽스했습니다, i는 p+1이 아니라 p부터 시작입니다
+    while(p <= totalPage) {
         // const result = callList(timelineList, i);
         // totalList.push(result);
         // console.log(i, totalList[i])
-        callList(timelineList, i);
+        await callList(p++);
     }
-    more.parentElement.style.display = 'none';
     loading.parentElement.style.display = 'none';
+    // FIXME 완료이후에 이벤트리스너 떼주세요
 }
 load_all.addEventListener('click', loadAll);
 
