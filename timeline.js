@@ -182,7 +182,7 @@ more.addEventListener('click', clickMore);
 
 
 // 전체보기 함수
-const loadAllPage = function(e) {
+const loadAllPage = async function(e) {
     console.log('전체보기')
     /* BUG 2페이지가 3페이지 보다 응답이 먼저 온다는 보장이 없으며, 현재는 페이지가 섞일 수 있습니다
     요청순서에 따른 응답순서 보장받을 수 있도록 비동기로 수행 해주세요 */
