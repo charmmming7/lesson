@@ -5,6 +5,7 @@
  */
 (async () => {
 
+// 유틸리티성 객체 - 모든 객체에서 사용하는 공통속성, 공통메소드 보유 (경리사원)
 const common = (() => {
     const IMG_PATH = 'https://it-crafts.github.io/lesson/img';
     const fetchApiData = async (url, page = 'info') => {
@@ -16,6 +17,7 @@ const common = (() => {
     return { IMG_PATH, fetchApiData }
 })();
 
+// 루트 객체 - 본 SPA의 모든 하위객체에 최초의 명령을 내리는 주체 (본부장)
 const root = (() => {
     let $el;
 
@@ -27,7 +29,13 @@ const root = (() => {
     return { $el }
 })();
 
+// 페이지 객체 - 요청된 URL PATH의 최상위객체, 라우팅의 주체 (팀장)
 const timeline = await (async($parent) => {
+    // console.log(root) //main
+    // console.log(root.$el) //main
+    // console.log($parent) //main
+    // XXX [질문1] root, $el, root.$el 이 다 같은 엘리먼트를 가리키는데, 변수명이 다 다른 이유는 무엇때문인가요? 잘 이해가 안되서 질문드립니다.
+    
     let $el;
     const url = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
     const infoData = await common.fetchApiData(url);
@@ -55,6 +63,7 @@ const timeline = await (async($parent) => {
     return { $el, totalPage, profileData, url }
 })(root.$el);
 
+// 페이지 객체의 하위섹션 객체, 여기서는 헤더영역 담당 (파트장1)
 const timelineProfile = (($parent, profileData) => {
     let $el;
 
@@ -74,6 +83,10 @@ const timelineProfile = (($parent, profileData) => {
         return num;
     };
 
+    /* XXX 71줄, 89줄
+     *  render함수는 프로필 데이터를 위해서만 사용되는 함수니까 const render = (data) => / render(profileData); 대신 
+     *  const render = (profileData) => / render(); 이렇게 써도 되나요?
+     */
     const render = (data) => {
         $parent.insertAdjacentHTML('afterbegin', `
             <div>
@@ -116,6 +129,7 @@ const timelineProfile = (($parent, profileData) => {
     return { $el }
 })(timeline.$el, timeline.profileData);
 
+// 페이지 객체의 하위섹션 객체, 여기서는 콘텐츠영역 담당 (파트장2)
 const timelineContent = (($parent) => {
     let $el;
 
@@ -143,12 +157,18 @@ const grid = await (async ($parent, url) => {
     let page = 1;
     const timelineList = await common.fetchApiData(url, page++);
 
+    let resultList = [];
+    resultList = timelineList;
+
+    // 3번
     const create = () => {
         render();
         $el = $parent.lastElementChild;
     }
 
+    // 2번
     const divide = (list, size) => {
+        console.log('divide', list)
         const copy = [...list];
         const cnt = Math.ceil(copy.length / size);
     
@@ -161,9 +181,10 @@ const grid = await (async ($parent, url) => {
         for(let i = lastlist.length; i < size; i++) {
             lastlist[i] = {};
         }
-        
         return listList;
     };
+    
+    // 1번
     const listList = divide(timelineList, 3);
 
     const filter = () => {
@@ -172,18 +193,36 @@ const grid = await (async ($parent, url) => {
         // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
     }
 
-    const sort = () => {
+    const sort = (sortOption) => {
         // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
         $el.lastElementChild.firstElementChild.innerHTML = '';
+        let copyList = [];
+        
         // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
-    }
+        if(sortOption.latest === true){  
+            console.log('최신순')
+            
+            copyList = timelineList.slice(); 
+            // 아래방법으로 복사하면 배열값(timestamp) 복사되지 않음
+            // for(let i = 0; i < timelineList.length; i++) {
+            //     copyList.push(timelineList.splice(0, timelineList.length));
+            // }
+            
+            copyList.sort((x,y) => new Date(x.timestamp) - new Date(y.timestamp) ? 1:-1);
+            console.log("copyList.sort", copyList)
 
+            sortOption.latest = false;
+            btnLatest.removeEventListener('click', clickLatest);
+        }     
+        return listList;
+    }
+    
     const render = () => {
         $parent.insertAdjacentHTML('beforeend', `
             <article class="FyNDV">
                 <div class="Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl JI_ht bkEs3 DhRcB">
-                    <button class="sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
-                    <button class="sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
+                    <button class="btn_latest sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
+                    <button class="btn_liked sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
                     <h1 class="K3Sf1">
                         <div class="Igw0E rBNOH eGOV_ ybXk5 _4EzTm">
                             <div class="Igw0E IwRSH eGOV_ vwCYk">
@@ -213,11 +252,14 @@ const grid = await (async ($parent, url) => {
         `);
     }
 
+    // 3번
     create();
-    return { $el, listList }
+    return { $el, listList, sort, filter }
 })(timelineContent.$el.firstElementChild, timeline.url);
+//grid
 
 grid.listList.forEach(list => {
+    // divide이후 여기가 불려지지 않음
     const gridItem = (($parent, list) => {
         let $el;
 
@@ -228,6 +270,7 @@ grid.listList.forEach(list => {
 
         const render = (list) => {
             const html = list.reduce((html, data) => {
+                // 이미지(/1.jpg)가 없을 경우 undefined 대신 빈텍스트 넣는다.
                 const img = (data.img || '') && `
                     <a href="javascript:;">
                         <div class="eLAPa">
@@ -254,5 +297,34 @@ grid.listList.forEach(list => {
         return { $el }
     })(grid.$el.lastElementChild.firstElementChild, list);
 });
+
+// XXX let과 const를 어느 상황에 써야 적절한것인지 아직 잘 감이 안옵니다ㅠ
+let article = grid.$el;
+const sortOption = {
+    latest : false,
+    liked : false
+};
+
+// 최신순 버튼 이벤트리스너
+const clickLatest = await function(e){
+    sortOption.latest = true;
+    grid.sort(sortOption);
+}
+// 인기순 버튼 이벤트리스너
+const clickLiked = await function(e){
+    sortOption.liked = true;
+    grid.sort(sortOption);
+}
+
+/* XXX [질문] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
+ * 성능적인 측면에서 더 우수한가요?
+ */ 
+// let btnLatest = article.children[0].children[1];
+// let btnLiked = article.children[0].firstElementChild;
+let btnLatest = article.querySelector('.btn_latest');
+let btnLiked = article.querySelector('.btn_liked');
+
+btnLatest.addEventListener('click', clickLatest);
+btnLiked.addEventListener('click', clickLiked);
 
 })();
