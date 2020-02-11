@@ -219,7 +219,16 @@ const grid = await (async ($parent, url) => {
             //     copyList.push(timelineList.splice(0, timelineList.length));
             // }
             
-            copyList.sort((x,y) => new Date(x.timestamp) - new Date(y.timestamp) ? 1:-1);
+            copyList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
+
+            for(let i = 0; i < copyList.length; i++) {
+                console.log( copyList[i].timestamp, Date.parse(copyList[i].timestamp) )
+            }
+
+            /* XXX 아래처럼 new Date()를 이용한 비교식으로도 날짜비교가 가능한 것 같은데, 
+            *  위에서 Date.parse()를 이용한 것과 데이터타입이 다르다는 것 말고 또 다른 차이가 있을까?
+            */
+            // console.log(new Date(copyList[0].timestamp) > new Date(copyList[1].timestamp) ? "앞이더큼" : "뒤가더큼")
 
             const listList = divide(copyList, 3);
             console.log("6. grid divide sort listList")
@@ -227,8 +236,7 @@ const grid = await (async ($parent, url) => {
 
             sortOption.latest = false;
             btnLatest.removeEventListener('click', clickLatest);
-        }     
-
+        }
         return listList;
     }
     
@@ -265,7 +273,7 @@ const grid = await (async ($parent, url) => {
                 </div>
             </article>
         `);
-        console.log("8. grid render", $parent, $parent.lastElementChild.lastElementChild)
+        console.log("8. grid render")
     }
 
     // grid reRender
@@ -289,7 +297,7 @@ const grid = await (async ($parent, url) => {
 // grid에 리스트 render 해주는 forEach를 함수로 생성
 const gridRender = () => {
     grid.listList.forEach(list => {
-        console.log("9. forEach", list)
+        console.log("9. forEach")
         const gridItem = (($parent, list) => {
             let $el;
 
