@@ -134,11 +134,13 @@ const timelineContent = (($parent) => {
     let $el;
 
     const create = () => {
+        console.log("1. create")
         render();
         $el = $parent.lastElementChild;
     }
 
     const render = () => {
+        console.log("2. render")
         $parent.insertAdjacentHTML('beforeend', `
             <div class="_2z6nI">
                 <div style="flex-direction: column;">
@@ -156,19 +158,25 @@ const grid = await (async ($parent, url) => {
 
     let page = 1;
     const timelineList = await common.fetchApiData(url, page++);
-
-    let resultList = [];
-    resultList = timelineList;
+    console.log("3. timelineList")
 
     // 3번
     const create = () => {
+        console.log("7. grid create")
         render();
         $el = $parent.lastElementChild;
     }
 
+    // createGrid
+    const reCreateGrid = () => {
+        console.log("0. grid reCreateGrid")
+        reRender();
+        $el = $parent.lastElementChild.lastElementChild;
+    }
+
     // 2번
     const divide = (list, size) => {
-        console.log('divide', list)
+        console.log("5. grid divide")
         const copy = [...list];
         const cnt = Math.ceil(copy.length / size);
     
@@ -183,9 +191,11 @@ const grid = await (async ($parent, url) => {
         }
         return listList;
     };
-    
+
     // 1번
     const listList = divide(timelineList, 3);
+    console.log("6. grid divide listList")
+    
 
     const filter = () => {
         // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
@@ -193,7 +203,8 @@ const grid = await (async ($parent, url) => {
         // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
     }
 
-    const sort = (sortOption) => {
+    const sort = async (sortOption) => {
+        console.log("0. grid sort")
         // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
         $el.lastElementChild.firstElementChild.innerHTML = '';
         let copyList = [];
@@ -209,11 +220,15 @@ const grid = await (async ($parent, url) => {
             // }
             
             copyList.sort((x,y) => new Date(x.timestamp) - new Date(y.timestamp) ? 1:-1);
-            console.log("copyList.sort", copyList)
+
+            const listList = divide(copyList, 3);
+            console.log("6. grid divide sort listList")
+            reCreateGrid();
 
             sortOption.latest = false;
             btnLatest.removeEventListener('click', clickLatest);
         }     
+
         return listList;
     }
     
@@ -222,7 +237,7 @@ const grid = await (async ($parent, url) => {
             <article class="FyNDV">
                 <div class="Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl JI_ht bkEs3 DhRcB">
                     <button class="btn_latest sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
-                    <button class="btn_liked sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
+                    <button class="btn_popular sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
                     <h1 class="K3Sf1">
                         <div class="Igw0E rBNOH eGOV_ ybXk5 _4EzTm">
                             <div class="Igw0E IwRSH eGOV_ vwCYk">
@@ -250,59 +265,76 @@ const grid = await (async ($parent, url) => {
                 </div>
             </article>
         `);
+        console.log("8. grid render", $parent, $parent.lastElementChild.lastElementChild)
+    }
+
+    // grid reRender
+    const reRender = () => {
+        $parent = $parent.lastElementChild.lastElementChild; //article
+        // $parent.insertAdjacentHTML('beforeend', `
+        //     <div style="flex-direction: column; padding-bottom: 0px; padding-top: 0px;">
+        //     </div>
+        // `);
+        console.log("10. grid reRender", $parent)
+
+        gridRender();
     }
 
     // 3번
     create();
-    return { $el, listList, sort, filter }
-})(timelineContent.$el.firstElementChild, timeline.url);
+    return { $el, listList, sort }
+})(timelineContent.$el.firstElementChild, timeline.url );
 //grid
 
-grid.listList.forEach(list => {
-    // divide이후 여기가 불려지지 않음
-    const gridItem = (($parent, list) => {
-        let $el;
+// grid에 리스트 render 해주는 forEach를 함수로 생성
+const gridRender = () => {
+    grid.listList.forEach(list => {
+        console.log("9. forEach", list)
+        const gridItem = (($parent, list) => {
+            let $el;
 
-        const create = () => {
-            render(list);
-            $el = $parent.lastElementChild;
-        }
+            const create = () => {
+                render(list);
+                $el = $parent.lastElementChild;
+            }
 
-        const render = (list) => {
-            const html = list.reduce((html, data) => {
-                // 이미지(/1.jpg)가 없을 경우 undefined 대신 빈텍스트 넣는다.
-                const img = (data.img || '') && `
-                    <a href="javascript:;">
-                        <div class="eLAPa">
-                            <div class="KL4Bh">
-                                <img class="FFVAD" decoding="auto" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;">
+            const render = (list) => {
+                const html = list.reduce((html, data) => {
+                    // 이미지(/1.jpg)가 없을 경우 undefined 대신 빈텍스트 넣는다.
+                    const img = (data.img || '') && `
+                        <a href="javascript:;">
+                            <div class="eLAPa">
+                                <div class="KL4Bh">
+                                    <img class="FFVAD" decoding="auto" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;">
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                `;
-                html += `
-                    <div class="v1Nh3 kIKUG _bz0w">${img}</div>
-                `;
-                return html;
-            }, '');
-            
-            $parent.insertAdjacentHTML('beforeend', `
-                <div class="Nnq7C weEfm">
-                    ${html}
-                </div>
-            `);
-        }
-    
-        create();
-        return { $el }
-    })(grid.$el.lastElementChild.firstElementChild, list);
-});
+                        </a>
+                    `;
+                    html += `
+                        <div class="v1Nh3 kIKUG _bz0w">${img}</div>
+                    `;
+                    return html;
+                }, '');
+                
+                $parent.insertAdjacentHTML('beforeend', `
+                    <div class="Nnq7C weEfm">
+                        ${html}
+                    </div>
+                `);
+            }
+        
+            create();
+            return { $el }
+        })(grid.$el.lastElementChild.firstElementChild, list);
+    });
+}
+gridRender();
 
 // XXX let과 const를 어느 상황에 써야 적절한것인지 아직 잘 감이 안옵니다ㅠ
 let article = grid.$el;
 const sortOption = {
     latest : false,
-    liked : false
+    popular : false
 };
 
 // 최신순 버튼 이벤트리스너
@@ -311,20 +343,21 @@ const clickLatest = await function(e){
     grid.sort(sortOption);
 }
 // 인기순 버튼 이벤트리스너
-const clickLiked = await function(e){
-    sortOption.liked = true;
-    grid.sort(sortOption);
+const clickPopular = await function(e){
+    sortOption.popular = true;
+    // grid.sort(sortOption);
+    
 }
 
 /* XXX [질문] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
  * 성능적인 측면에서 더 우수한가요?
  */ 
 // let btnLatest = article.children[0].children[1];
-// let btnLiked = article.children[0].firstElementChild;
+// let btnPopular = article.children[0].firstElementChild;
 let btnLatest = article.querySelector('.btn_latest');
-let btnLiked = article.querySelector('.btn_liked');
+let btnPopular = article.querySelector('.btn_popular');
 
 btnLatest.addEventListener('click', clickLatest);
-btnLiked.addEventListener('click', clickLiked);
+btnPopular.addEventListener('click', clickPopular);
 
 })();
