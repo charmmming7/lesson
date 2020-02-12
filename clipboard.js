@@ -134,13 +134,11 @@ const timelineContent = (($parent) => {
     let $el;
 
     const create = () => {
-        console.log("1. create")
         render();
         $el = $parent.lastElementChild;
     }
 
     const render = () => {
-        console.log("2. render")
         $parent.insertAdjacentHTML('beforeend', `
             <div class="_2z6nI">
                 <div style="flex-direction: column;">
@@ -153,219 +151,180 @@ const timelineContent = (($parent) => {
     return { $el }
 })(timeline.$el);
 
-const grid = await (async ($parent, url) => {
-    let $el;
+const gridWrap = await (async ($parent, url) => {
+        let $el;
+        let $btnLatest, $btnPopular;
 
-    let page = 1;
-    const timelineList = await common.fetchApiData(url, page++);
-    console.log("3. timelineList")
+        let page = 1;
+        const timelineList = await common.fetchApiData(url, page++);
 
-    // 3번
-    const create = () => {
-        console.log("7. grid create")
-        render();
-        $el = $parent.lastElementChild;
-    }
+        // 3번
+        // article ~ grid 외 엘리먼트 렌더링. $el = article
+        const create = () => {
+            // console.log("1-3. createUtils")
+            render();
+            $el = $parent.lastElementChild;
 
-    // createGrid
-    const reCreateGrid = () => {
-        console.log("0. grid reCreateGrid")
-        reRender();
-        $el = $parent.lastElementChild.lastElementChild;
-    }
-
-    // 2번
-    const divide = (list, size) => {
-        console.log("5. grid divide")
-        const copy = [...list];
-        const cnt = Math.ceil(copy.length / size);
-    
-        const listList = [];
-        for(let i = 0; i < cnt; i++) {
-            listList.push(copy.splice(0, size));
-        }
-
-        const lastlist = listList[listList.length - 1];
-        for(let i = lastlist.length; i < size; i++) {
-            lastlist[i] = {};
-        }
-        return listList;
-    };
-
-    // 1번
-    const listList = divide(timelineList, 3);
-    console.log("6. grid divide listList")
-    
-
-    const filter = () => {
-        // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
-        $el.lastElementChild.firstElementChild.innerHTML = '';
-        // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
-    }
-
-    const sort = async (sortOption) => {
-        console.log("0. grid sort")
-        // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
-        $el.lastElementChild.firstElementChild.innerHTML = '';
-        let copyList = [];
-        
-        // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
-        if(sortOption.latest === true){  
-            console.log('최신순')
-            
-            copyList = timelineList.slice(); 
-            // 아래방법으로 복사하면 배열값(timestamp) 복사되지 않음
-            // for(let i = 0; i < timelineList.length; i++) {
-            //     copyList.push(timelineList.splice(0, timelineList.length));
-            // }
-            
-            copyList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
-
-            for(let i = 0; i < copyList.length; i++) {
-                console.log( copyList[i].timestamp, Date.parse(copyList[i].timestamp) )
-            }
-
-            /* XXX 아래처럼 new Date()를 이용한 비교식으로도 날짜비교가 가능한 것 같은데, 
-            *  위에서 Date.parse()를 이용한 것과 데이터타입이 다르다는 것 말고 또 다른 차이가 있을까?
+            /** XXX [질문1] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
+            * 성능적인 측면에서 더 우수한가요?
+            */ 
+           /* XXX [질문2] 여기서 $parent 또는 $el 로 getElementById('btn_latest'); 를 하면 $parent.getElementById is not a function 에러가 뜨는지 모르겠습니다.
             */
-            // console.log(new Date(copyList[0].timestamp) > new Date(copyList[1].timestamp) ? "앞이더큼" : "뒤가더큼")
-
-            const listList = divide(copyList, 3);
-            console.log("6. grid divide sort listList")
-            reCreateGrid();
-
-            sortOption.latest = false;
-            btnLatest.removeEventListener('click', clickLatest);
+            $btnLatest = document.getElementById('btn_latest');
+            $btnPopular = document.getElementById('btn_popular');
         }
-        return listList;
-    }
-    
-    const render = () => {
-        $parent.insertAdjacentHTML('beforeend', `
-            <article class="FyNDV">
-                <div class="Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl JI_ht bkEs3 DhRcB">
-                    <button class="btn_latest sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
-                    <button class="btn_popular sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
-                    <h1 class="K3Sf1">
-                        <div class="Igw0E rBNOH eGOV_ ybXk5 _4EzTm">
-                            <div class="Igw0E IwRSH eGOV_ vwCYk">
-                                <div class="Igw0E IwRSH eGOV_ ybXk5 _4EzTm">
-                                    <div class="Igw0E IwRSH eGOV_ vwCYk">
-                                        <label class="NcCcD">
-                                            <input autocapitalize="none" autocomplete="off" class="j_2Hd iwQA6 RO68f M5V28" placeholder="검색" spellcheck="true" type="search" value="" />
-                                            <div class="DWAFP">
-                                                <div class="Igw0E IwRSH eGOV_ _4EzTm">
-                                                    <span aria-label="검색" class="glyphsSpriteSearch u-__7"></span>
+
+        // $parent = flex-direction: column;
+        const render = () => {
+            $parent.insertAdjacentHTML('beforeend', `
+                <article class="FyNDV">
+                    <div class="Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl JI_ht bkEs3 DhRcB">
+                        <button id="btn_latest" class="sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
+                        <button id="btn_popular" class="sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
+                        <h1 class="K3Sf1">
+                            <div class="Igw0E rBNOH eGOV_ ybXk5 _4EzTm">
+                                <div class="Igw0E IwRSH eGOV_ vwCYk">
+                                    <div class="Igw0E IwRSH eGOV_ ybXk5 _4EzTm">
+                                        <div class="Igw0E IwRSH eGOV_ vwCYk">
+                                            <label class="NcCcD">
+                                                <input autocapitalize="none" autocomplete="off" class="j_2Hd iwQA6 RO68f M5V28" placeholder="검색" spellcheck="true" type="search" value="" />
+                                                <div class="DWAFP">
+                                                    <div class="Igw0E IwRSH eGOV_ _4EzTm">
+                                                        <span aria-label="검색" class="glyphsSpriteSearch u-__7"></span>
+                                                    </div>
+                                                    <span class="rwQu7">검색</span>
                                                 </div>
-                                                <span class="rwQu7">검색</span>
-                                            </div>
-                                            <div class="Igw0E rBNOH YBx95 _4EzTm ItkAi O1flK fm1AK TxciK yiMZG"></div>
-                                        </label>
+                                                <div class="Igw0E rBNOH YBx95 _4EzTm ItkAi O1flK fm1AK TxciK yiMZG"></div>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </h1>
-                </div>
-                <div>
-                    <div style="flex-direction: column; padding-bottom: 0px; padding-top: 0px;">
+                        </h1>
                     </div>
-                </div>
-            </article>
-        `);
-        console.log("8. grid render")
-    }
+                    <div class="grid-wrap">
+                        <div class="grid" style="flex-direction: column; padding-bottom: 0px; padding-top: 0px;">
+                        </div>
+                    </div>
+                </article>
+            `);
+        }
 
-    // grid reRender
-    const reRender = () => {
-        $parent = $parent.lastElementChild.lastElementChild; //article
-        // $parent.insertAdjacentHTML('beforeend', `
-        //     <div style="flex-direction: column; padding-bottom: 0px; padding-top: 0px;">
-        //     </div>
-        // `);
-        console.log("10. grid reRender", $parent)
+        // 1번
+        const divide = (list, size) => {
+            const copy = [...list];
+            const cnt = Math.ceil(copy.length / size);
+        
+            const listList = [];
+            for(let i = 0; i < cnt; i++) {
+                listList.push(copy.splice(0, size));
+            }
 
-        gridRender();
-    }
+            const lastlist = listList[listList.length - 1];
+            for(let i = lastlist.length; i < size; i++) {
+                lastlist[i] = {};
+            }
+            // console.log("1-1. grid divide", listList)
+            return listList;
+        };
 
-    // 3번
-    create();
-    return { $el, listList, sort }
+        // 0번
+        const listList = divide(timelineList, 3);    
+        
+        // XXX 검색기능 아직 미구현 입니다ㅠㅠ 금요일까진 업데이트 하겠습니다.
+        const filter = () => {
+            // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
+            $el.lastElementChild.firstElementChild.innerHTML = ''; //grid-wrap
+            // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
+        }
+
+        const sort = (option) => {
+            // console.log("3. grid sort", option)
+            // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
+            let sortedList = timelineList.slice(); 
+            $btnLatest.addEventListener('click', clickLatest);
+            $el.lastElementChild.innerHTML = ''; //grid-wrap
+            
+            // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
+            if(option === 'lastest'){        
+                sortedList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
+            }
+            else if(option === 'popular'){
+                $btnPopular.addEventListener('click', clickPopular);
+
+                for(let i = 0; i < sortedList.length; i++) {
+                    sortedList[i].totalCount = (parseInt(sortedList[i].clipCount) + parseInt(sortedList[i].commentCount)*2);
+                }
+                sortedList.sort((x,y) => x.totalCount > y.totalCount ? -1:1);
+            }
+
+            divide(sortedList, 3).forEach((sortedList) => {
+                gridItem($el, sortedList);
+            });
+
+        }
+        //sort
+        
+        create();
+
+        const clickLatest = function(e){
+            gridWrap.sort('latest');
+        }
+
+        const clickPopular = function(e){
+            gridWrap.sort('popular');
+        }
+        $btnLatest.addEventListener('click', clickLatest);
+        $btnPopular.addEventListener('click', clickPopular);
+
+        return { $el, listList, sort }
 })(timelineContent.$el.firstElementChild, timeline.url );
 //grid
 
 // grid에 리스트 render 해주는 forEach를 함수로 생성
-const gridRender = () => {
-    grid.listList.forEach(list => {
-        console.log("9. forEach")
-        const gridItem = (($parent, list) => {
-            let $el;
+// $parent = .grid-wrap / listList / list = row
+const gridItem = ($parent, list) => {
+    let $el;
+    $el = $parent.lastElementChild;
 
-            const create = () => {
-                render(list);
-                $el = $parent.lastElementChild;
-            }
+    // $el = .row / list = row
+    const create = () => {
+        render(list);
+    }
 
-            const render = (list) => {
-                const html = list.reduce((html, data) => {
-                    // 이미지(/1.jpg)가 없을 경우 undefined 대신 빈텍스트 넣는다.
-                    const img = (data.img || '') && `
-                        <a href="javascript:;">
-                            <div class="eLAPa">
-                                <div class="KL4Bh">
-                                    <img class="FFVAD" decoding="auto" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;">
-                                </div>
-                            </div>
-                        </a>
-                    `;
-                    html += `
-                        <div class="v1Nh3 kIKUG _bz0w">${img}</div>
-                    `;
-                    return html;
-                }, '');
-                
-                $parent.insertAdjacentHTML('beforeend', `
-                    <div class="Nnq7C weEfm">
-                        ${html}
+    const render = (list) => {
+        /**
+        * reducer는 콜백 반환값을 누적
+        * arr.reduce(callback, [initialValue]) : accumulator(누산기), currentValue(현재값) -> 현재 data값을 넣은 html 누간
+        */
+        const html = list.reduce((html, data) => { 
+            // 이미지(/1.jpg)가 없을 경우 undefined 대신 빈텍스트 넣는다.
+            const img = (data.img || '') && `
+                <a href="javascript:;">
+                    <div class="eLAPa">
+                        <div class="KL4Bh">
+                            <img class="FFVAD" decoding="auto" src="${common.IMG_PATH}${data.img}" style="object-fit: cover;">
+                        </div>
                     </div>
-                `);
-            }
+                </a>
+            `;
+            html += `
+                <div class="one-item v1Nh3 kIKUG _bz0w">${img}</div>
+            `;
+            return html;
+        }, '');
         
-            create();
-            return { $el }
-        })(grid.$el.lastElementChild.firstElementChild, list);
-    });
-}
-gridRender();
-
-// XXX let과 const를 어느 상황에 써야 적절한것인지 아직 잘 감이 안옵니다ㅠ
-let article = grid.$el;
-const sortOption = {
-    latest : false,
-    popular : false
+        $el.insertAdjacentHTML('beforeend', `
+            <div class="row Nnq7C weEfm">
+                ${html}
+            </div>
+        `);
+    }
+    create();
+    return { $el } //row
 };
 
-// 최신순 버튼 이벤트리스너
-const clickLatest = await function(e){
-    sortOption.latest = true;
-    grid.sort(sortOption);
-}
-// 인기순 버튼 이벤트리스너
-const clickPopular = await function(e){
-    sortOption.popular = true;
-    // grid.sort(sortOption);
-    
-}
-
-/* XXX [질문] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
- * 성능적인 측면에서 더 우수한가요?
- */ 
-// let btnLatest = article.children[0].children[1];
-// let btnPopular = article.children[0].firstElementChild;
-let btnLatest = article.querySelector('.btn_latest');
-let btnPopular = article.querySelector('.btn_popular');
-
-btnLatest.addEventListener('click', clickLatest);
-btnPopular.addEventListener('click', clickPopular);
+// console.log(gridWrap.$el.lastElementChild) //grid-wrap
+gridWrap.listList.forEach(list => { gridItem(gridWrap.$el.lastElementChild, list); });
 
 })();
