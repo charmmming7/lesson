@@ -26,16 +26,11 @@ const root = (() => {
     }
 
     create();
-    return { $el }
+    return { $el } //외부로 통신할 객체만 오픈해줌
 })();
 
 // 페이지 객체 - 요청된 URL PATH의 최상위객체, 라우팅의 주체 (팀장)
 const timeline = await (async($parent) => {
-    // console.log(root) //main
-    // console.log(root.$el) //main
-    // console.log($parent) //main
-    // XXX [질문1] root, $el, root.$el 이 다 같은 엘리먼트를 가리키는데, 변수명이 다 다른 이유는 무엇때문인가요? 잘 이해가 안되서 질문드립니다.
-    
     let $el;
     const url = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
     const infoData = await common.fetchApiData(url);
@@ -47,6 +42,7 @@ const timeline = await (async($parent) => {
         $el = $parent.firstElementChild;
     }
 
+    // render는 순수한 뷰 컴포넌트
     const render = () => {
         $parent.innerHTML = `
             <div class="v9tJq">
@@ -151,48 +147,99 @@ const timelineContent = (($parent) => {
     return { $el }
 })(timeline.$el);
 
+// 컨트롤러 컴포넌트 역할
 const gridWrap = await (async ($parent, url) => {
-        let $el;
-        let $btnLatest, $btnPopular;
+    let $el;
+    let $btnLatest, $btnPopular;
 
-        let page = 1;
-        const timelineList = await common.fetchApiData(url, page++);
+    let page = 1;
+    const ITEM_PER_ROW = 3;
+    const timelineList = await common.fetchApiData(url, page++);
 
-        // 3번
-        // article ~ grid 외 엘리먼트 렌더링. $el = article
-        const create = () => {
-            // console.log("1-3. createUtils")
-            render();
-            $el = $parent.lastElementChild;
+    // 3번
+    // article ~ grid 외 엘리먼트 렌더링. $el = article
+    const create = () => {
+        render();
+        $el = $parent.lastElementChild;
 
-            /** XXX [질문1] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
-            * 성능적인 측면에서 더 우수한가요?
-            */ 
-           /* XXX [질문2] 여기서 $parent 또는 $el 로 getElementById('btn_latest'); 를 하면 $parent.getElementById is not a function 에러가 뜨는지 모르겠습니다.
-            */
-            $btnLatest = document.getElementById('btn_latest');
-            $btnPopular = document.getElementById('btn_popular');
+        /** XXX [질문1] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
+        * 성능적인 측면에서 더 우수한가요?
+        */ 
+        /* XXX [질문2] 여기서 $parent 또는 $el 로 getElementById('btn_latest'); 를 하면 $parent.getElementById is not a function 에러가 뜨는지 모르겠습니다.
+        */
+        $btnLatest = document.getElementById('btn_latest');
+        $btnPopular = document.getElementById('btn_popular');
+    }
+    
+    // 1번
+    // 클로져로 묶인 지역함수(캡슐화)
+    const divide = (list, size) => {
+        const copy = [...list];
+        const cnt = Math.ceil(copy.length / size);
+
+        const listList = [];
+        for(let i = 0; i < cnt; i++) {
+            listList.push(copy.splice(0, size));
         }
 
-        // $parent = flex-direction: column;
-        const render = () => {
-            $parent.insertAdjacentHTML('beforeend', `
-                <article class="FyNDV">
-                    <div class="Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl JI_ht bkEs3 DhRcB">
-                        <button id="btn_latest" class="sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
-                        <button id="btn_popular" class="sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
-                        <h1 class="K3Sf1">
-                            <div class="Igw0E rBNOH eGOV_ ybXk5 _4EzTm">
-                                <div class="Igw0E IwRSH eGOV_ vwCYk">
-                                    <div class="Igw0E IwRSH eGOV_ ybXk5 _4EzTm">
-                                        <div class="Igw0E IwRSH eGOV_ vwCYk">
-                                            <label class="NcCcD">
-                                                <input autocapitalize="none" autocomplete="off" class="j_2Hd iwQA6 RO68f M5V28" placeholder="검색" spellcheck="true" type="search" value="" />
-                                                <div class="DWAFP">
-                                                    <div class="Igw0E IwRSH eGOV_ _4EzTm">
-                                                        <span aria-label="검색" class="glyphsSpriteSearch u-__7"></span>
-                                                    </div>
-                                                    <span class="rwQu7">검색</span>
+        const lastlist = listList[listList.length - 1];
+        for(let i = lastlist.length; i < size; i++) {
+            lastlist[i] = {};
+        }
+        return listList;
+    };
+
+    const listList = divide(timelineList, ITEM_PER_ROW);
+
+    // XXX 검색기능 아직 미구현 입니다ㅠㅠ 금요일까진 업데이트 하겠습니다.
+    const filter = () => {
+        // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
+        $el.lastElementChild.firstElementChild.innerHTML = '';
+        divide(timelineList.filter(/* TODO */), ITEM_PER_ROW)
+            .forEach(list => {/* TODO */});
+    }
+
+    const sort = (option) => {
+        // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
+        // $el.lastElementChild.firstElementChild.innerHTML = '';
+        let sortedList = timelineList.slice(); 
+        $btnLatest.addEventListener('click', clickLatest);
+        $el.lastElementChild.innerHTML = ''; //grid-wrap
+
+        if(option === 'lastest'){        
+            sortedList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
+        }
+        else if(option === 'popular'){
+            $btnPopular.addEventListener('click', clickPopular);
+
+            for(let i = 0; i < sortedList.length; i++) {
+                sortedList[i].totalCount = (parseInt(sortedList[i].clipCount) + parseInt(sortedList[i].commentCount)*2);
+            }
+            sortedList.sort((x,y) => x.totalCount > y.totalCount ? -1:1);
+        }
+
+        divide(sortedList, ITEM_PER_ROW)
+            .forEach((sortedList) => {
+                gridItem($el, sortedList);
+            });
+    }
+
+    const render = () => {
+        $parent.insertAdjacentHTML('beforeend', `
+            <article class="FyNDV">
+                <div class="Igw0E rBNOH YBx95 ybXk5 _4EzTm soMvl JI_ht bkEs3 DhRcB">
+                    <button id="btn_latest" class="sqdOP L3NKy y3zKF JI_ht" type="button">최신순</button>
+                    <button id="btn_popular" class="sqdOP L3NKy y3zKF JI_ht" type="button">인기순</button>
+                    <h1 class="K3Sf1">
+                        <div class="Igw0E rBNOH eGOV_ ybXk5 _4EzTm">
+                            <div class="Igw0E IwRSH eGOV_ vwCYk">
+                                <div class="Igw0E IwRSH eGOV_ ybXk5 _4EzTm">
+                                    <div class="Igw0E IwRSH eGOV_ vwCYk">
+                                        <label class="NcCcD">
+                                            <input autocapitalize="none" autocomplete="off" class="j_2Hd iwQA6 RO68f M5V28" placeholder="검색" spellcheck="true" type="search" value="" />
+                                            <div class="DWAFP">
+                                                <div class="Igw0E IwRSH eGOV_ _4EzTm">
+                                                    <span aria-label="검색" class="glyphsSpriteSearch u-__7"></span>
                                                 </div>
                                                 <div class="Igw0E rBNOH YBx95 _4EzTm ItkAi O1flK fm1AK TxciK yiMZG"></div>
                                             </label>
@@ -206,78 +253,23 @@ const gridWrap = await (async ($parent, url) => {
                         <div class="grid" style="flex-direction: column; padding-bottom: 0px; padding-top: 0px;">
                         </div>
                     </div>
-                </article>
-            `);
-        }
+            </article>
+        `);
+    }
 
-        // 1번
-        const divide = (list, size) => {
-            const copy = [...list];
-            const cnt = Math.ceil(copy.length / size);
-        
-            const listList = [];
-            for(let i = 0; i < cnt; i++) {
-                listList.push(copy.splice(0, size));
-            }
+    create();
 
-            const lastlist = listList[listList.length - 1];
-            for(let i = lastlist.length; i < size; i++) {
-                lastlist[i] = {};
-            }
-            // console.log("1-1. grid divide", listList)
-            return listList;
-        };
+    const clickLatest = function(e){
+        gridWrap.sort('latest');
+    }
 
-        // 0번
-        const listList = divide(timelineList, 3);    
-        
-        // XXX 검색기능 아직 미구현 입니다ㅠㅠ 금요일까진 업데이트 하겠습니다.
-        const filter = () => {
-            // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
-            $el.lastElementChild.firstElementChild.innerHTML = ''; //grid-wrap
-            // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
-        }
+    const clickPopular = function(e){
+        gridWrap.sort('popular');
+    }
+    $btnLatest.addEventListener('click', clickLatest);
+    $btnPopular.addEventListener('click', clickPopular);
 
-        const sort = (option) => {
-            // console.log("3. grid sort", option)
-            // 현재는 각 컴포넌트가 destroy 미지원 -> 그냥 DOM만 비우고, 새로 gridItem들 생성
-            let sortedList = timelineList.slice(); 
-            $btnLatest.addEventListener('click', clickLatest);
-            $el.lastElementChild.innerHTML = ''; //grid-wrap
-            
-            // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
-            if(option === 'lastest'){        
-                sortedList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
-            }
-            else if(option === 'popular'){
-                $btnPopular.addEventListener('click', clickPopular);
-
-                for(let i = 0; i < sortedList.length; i++) {
-                    sortedList[i].totalCount = (parseInt(sortedList[i].clipCount) + parseInt(sortedList[i].commentCount)*2);
-                }
-                sortedList.sort((x,y) => x.totalCount > y.totalCount ? -1:1);
-            }
-
-            divide(sortedList, 3).forEach((sortedList) => {
-                gridItem($el, sortedList);
-            });
-
-        }
-        //sort
-        
-        create();
-
-        const clickLatest = function(e){
-            gridWrap.sort('latest');
-        }
-
-        const clickPopular = function(e){
-            gridWrap.sort('popular');
-        }
-        $btnLatest.addEventListener('click', clickLatest);
-        $btnPopular.addEventListener('click', clickPopular);
-
-        return { $el, listList, sort }
+    return { $el, listList, sort }
 })(timelineContent.$el.firstElementChild, timeline.url );
 //grid
 
