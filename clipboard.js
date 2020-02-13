@@ -31,6 +31,14 @@ const root = (() => {
 
 // 페이지 객체 - 요청된 URL PATH의 최상위객체, 라우팅의 주체 (팀장)
 const timeline = await (async($parent) => {
+    // console.log(root) //main
+    // console.log(root.$el) //main
+    // console.log($parent) //main
+    // [질문1] root, $el, root.$el 이 다 같은 엘리먼트를 가리키는데, 변수명이 다 다른 이유는 무엇때문인가요? 잘 이해가 안되서 질문드립니다.
+    /* COMMENT root는 루트 컴포넌트를 보고, root.$el이 루트 컴포넌트의 엘리먼트를 봅니다
+    그리고 여기서는 $parent에 root.$el을 꽂았기 때문에 얘도 루트 엘리먼트를 봅니다
+    root나 root.$el는 timeline 내부에서는 접근되어서는 안 됩니다
+    여기서는 $parent에만 접근 가능하고, 부모 엘리먼트로 추상화하여 사고합니다 */
     let $el;
     const url = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
     const infoData = await common.fetchApiData(url);
@@ -83,6 +91,10 @@ const timelineProfile = (($parent, profileData) => {
      *  render함수는 프로필 데이터를 위해서만 사용되는 함수니까 const render = (data) => / render(profileData); 대신 
      *  const render = (profileData) => / render(); 이렇게 써도 되나요?
      */
+    /* COMMENT 안 됩니다. 일단 그렇게 바꾸면 정상적으로 작동하지 않구요 (파라미터는 선언 되었는데, 아규먼트가 안 꽂혔으니)
+    render는 한 번 쓰고 끝나는 메소드가 아니라, 데이터 업데이트 시에 재사용하는 메소드입니다
+    계속 profileData를 기반으로 렌더한다는 보장이 없으며, 다른 데이터를 꽂아도 로직을 재사용 할 수 있어야 합니다
+    모든 함수는 되도록 순수함수로 작성되는 편이 바람직합니다 */
     const render = (data) => {
         $parent.insertAdjacentHTML('afterbegin', `
             <div>
@@ -161,11 +173,18 @@ const grid = await (async ($parent, url) => {
         render();
         $el = $parent.lastElementChild;
 
-        /** XXX [질문1] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
+        /** [질문1] <main> 같은 엘리먼트나 버튼 등을 클래스(querySelector)나 아이디(getElementById)로 선택하지 않고, 컨텍스트 기반의 엘리먼트 선택 메서드를 사용하시는 이유가 있나요?
         * 성능적인 측면에서 더 우수한가요?
         */ 
-        /* XXX [질문2] 여기서 $parent 또는 $el 로 getElementById('btn_latest'); 를 하면 $parent.getElementById is not a function 에러가 뜨는지 모르겠습니다.
+        /* COMMENT 나열된 방법 모두 바람직한 방법은 아닙니다
+        컴포넌트 내부에서 특정한 자식 엘리먼트를 잡기위해 태그 자체에 id나 class를 따로 선언해놓고 룩업하는 것도 바람직하지 못하고 (템플릿과 JS객체 간에 커플링이 생기므로)
+        지금과 같이 상대적인 위치로 뽑는 것도 절대 바람직하지 않습니다 (로직 내부에서 템플릿에 하위 컴포넌트나 커스텀 엘리먼트를 꽂으면 틀어지므로)
+        커리큘럼 중반부에 바람직한 구조가 잡히기 전까지 임시로 사용하고 있을 뿐입니다 */
+        /* [질문2] 여기서 $parent 또는 $el 로 getElementById('btn_latest'); 를 하면 $parent.getElementById is not a function 에러가 뜨는지 모르겠습니다.
         */
+        /* COMMENT 엘리먼트 객체에는 원래 getElementById API가 없습니다
+        ID는 한 문서에 유니크한 게 원래대로면 맞기 때문에 그렇습니다
+        물론 그렇다고 한 문서에 ID가 유니크하다는 얘기는 아닙니다 (보통 ID는 빈번하게 중복됩니다) */
         $btnLatest = document.getElementById('btn_latest');
         $btnPopular = document.getElementById('btn_popular');
         $inputSearch = document.querySelector('.input_search');
@@ -223,20 +242,20 @@ const grid = await (async ($parent, url) => {
         $inputSearch.addEventListener('keydown', search);
     }
 
+    // FIXME 적절한 패턴 적용하여, 보다 견고한 로직으로 리팩토링 했습니다 (수정완료)
+    const comparator = (() => {
+        const getTotalCount = data => data.clipCount*1 + data.commentCount*2;
+        return {
+            lastest: (x, y) => Date.parse(y.timestamp) - Date.parse(x.timestamp),
+            popular: (x,y) => getTotalCount(y) - getTotalCount(x),
+        }
+    })();
     const sort = (option) => {
         // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
         $el.lastElementChild.firstElementChild.innerHTML = '';
         let sortedList = timelineList.slice(); 
 
-        if(option === 'lastest'){     
-            sortedList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
-        }
-        else if(option === 'popular'){
-            for(let i = 0; i < sortedList.length; i++) {
-                sortedList[i].totalCount = (parseInt(sortedList[i].clipCount) + parseInt(sortedList[i].commentCount)*2);
-            }
-            sortedList.sort((x,y) => x.totalCount > y.totalCount ? -1:1);
-        }
+        sortedList.sort(comparator[option]);
 
         divide(sortedList, ITEM_PER_ROW)
         .forEach((sortedList) => {
@@ -290,10 +309,14 @@ const grid = await (async ($parent, url) => {
     const search = function(e){
         grid.filter(e);
     }
+    /* TODO 동일한 종류에 엘리먼트에 동일한 로직이 바인딩될 경우,
+    성능튜닝을 위해 부모 엘리먼트에 이벤트를 위임하고 동일한 리스너를 붙일 수 있습니다
+    이 때, data-option 과 같은 attribute를 통해 리스너 로직을 분기할 수 있습니다 */
     $btnLatest.addEventListener('click', clickLatest);
     $btnPopular.addEventListener('click', clickPopular);
     $inputSearch.addEventListener('keyup', search);
 
+    // FIXME sort, filter는 외부에서 호출할만한 API 메소드가 아닙니다. 빼주세요.
     return { $el, listList, sort, filter }
 })(timelineContent.$el.firstElementChild, timeline.url );
 //grid
