@@ -148,15 +148,14 @@ const timelineContent = (($parent) => {
 })(timeline.$el);
 
 // 컨트롤러 컴포넌트 역할
-const gridWrap = await (async ($parent, url) => {
+const grid = await (async ($parent, url) => {
     let $el;
-    let $btnLatest, $btnPopular;
+    let $btnLatest, $btnPopular, $inputSearch;
 
     let page = 1;
     const ITEM_PER_ROW = 3;
     const timelineList = await common.fetchApiData(url, page++);
 
-    // 3번
     // article ~ grid 외 엘리먼트 렌더링. $el = article
     const create = () => {
         render();
@@ -169,11 +168,12 @@ const gridWrap = await (async ($parent, url) => {
         */
         $btnLatest = document.getElementById('btn_latest');
         $btnPopular = document.getElementById('btn_popular');
+        $inputSearch = document.querySelector('.input_search');
     }
     
-    // 1번
     // 클로져로 묶인 지역함수(캡슐화)
     const divide = (list, size) => {
+        console.log(size)
         const copy = [...list];
         const cnt = Math.ceil(copy.length / size);
 
@@ -181,8 +181,9 @@ const gridWrap = await (async ($parent, url) => {
         for(let i = 0; i < cnt; i++) {
             listList.push(copy.splice(0, size));
         }
-
+        
         const lastlist = listList[listList.length - 1];
+        console.log(listList, lastlist)
         for(let i = lastlist.length; i < size; i++) {
             lastlist[i] = {};
         }
@@ -191,27 +192,46 @@ const gridWrap = await (async ($parent, url) => {
 
     const listList = divide(timelineList, ITEM_PER_ROW);
 
-    // XXX 검색기능 아직 미구현 입니다ㅠㅠ 금요일까진 업데이트 하겠습니다.
-    const filter = () => {
+    // 검색기능 아직 미구현 입니다ㅠㅠ 금요일까진 업데이트 하겠습니다.
+    let searchWord = '';
+    const filter = (e) => {
         // TODO 검색창 input에 key이벤트 발생시 검색로직 수행
+        
+        let filterList = [];
         $el.lastElementChild.firstElementChild.innerHTML = '';
-        divide(timelineList.filter(/* TODO */), ITEM_PER_ROW)
-            .forEach(list => {/* TODO */});
+
+        if( $inputSearch.value === "" ){
+            divide(timelineList, ITEM_PER_ROW)
+            .forEach((timelineList) => {
+                gridItem($el.lastElementChild.firstElementChild, timelineList);
+            });
+        }else{
+            for(let i = 0; i < timelineList.length; i++) {
+                console.log($inputSearch.value)
+                if(timelineList[i].name.includes($inputSearch.value) || timelineList[i].text.includes($inputSearch.value)){
+                    filterList.push(timelineList[i])
+                }
+            }
+            console.log("filterList", filterList)
+
+        }
+
+        if(filterList.length > 1){
+            $el.lastElementChild.firstElementChild.innerHTML = '';
+            divide( filterList, ITEM_PER_ROW).forEach(list => { gridItem($el.lastElementChild.firstElementChild, filterList ); });
+        }
+        $inputSearch.addEventListener('keydown', search);
     }
 
     const sort = (option) => {
         // TODO 최신순/인기순 클릭시 해당 정렬로직 수행
-        // $el.lastElementChild.firstElementChild.innerHTML = '';
+        $el.lastElementChild.firstElementChild.innerHTML = '';
         let sortedList = timelineList.slice(); 
-        $btnLatest.addEventListener('click', clickLatest);
-        $el.lastElementChild.innerHTML = ''; //grid-wrap
 
-        if(option === 'lastest'){        
+        if(option === 'lastest'){     
             sortedList.sort((x,y) => Date.parse(x.timestamp) - Date.parse(y.timestamp) ? 1:-1);
         }
         else if(option === 'popular'){
-            $btnPopular.addEventListener('click', clickPopular);
-
             for(let i = 0; i < sortedList.length; i++) {
                 sortedList[i].totalCount = (parseInt(sortedList[i].clipCount) + parseInt(sortedList[i].commentCount)*2);
             }
@@ -219,9 +239,9 @@ const gridWrap = await (async ($parent, url) => {
         }
 
         divide(sortedList, ITEM_PER_ROW)
-            .forEach((sortedList) => {
-                gridItem($el, sortedList);
-            });
+        .forEach((sortedList) => {
+            gridItem($el.lastElementChild.firstElementChild, sortedList);
+        });
     }
 
     const render = () => {
@@ -236,7 +256,7 @@ const gridWrap = await (async ($parent, url) => {
                                 <div class="Igw0E IwRSH eGOV_ ybXk5 _4EzTm">
                                     <div class="Igw0E IwRSH eGOV_ vwCYk">
                                         <label class="NcCcD">
-                                            <input autocapitalize="none" autocomplete="off" class="j_2Hd iwQA6 RO68f M5V28" placeholder="검색" spellcheck="true" type="search" value="" />
+                                            <input autocapitalize="none" autocomplete="off" class="input_search j_2Hd iwQA6 RO68f M5V28" placeholder="검색" spellcheck="true" type="search" value="" />
                                             <div class="DWAFP">
                                                 <div class="Igw0E IwRSH eGOV_ _4EzTm">
                                                     <span aria-label="검색" class="glyphsSpriteSearch u-__7"></span>
@@ -260,16 +280,21 @@ const gridWrap = await (async ($parent, url) => {
     create();
 
     const clickLatest = function(e){
-        gridWrap.sort('latest');
+        grid.sort('latest');
     }
 
     const clickPopular = function(e){
-        gridWrap.sort('popular');
+        grid.sort('popular');
+    }
+
+    const search = function(e){
+        grid.filter(e);
     }
     $btnLatest.addEventListener('click', clickLatest);
     $btnPopular.addEventListener('click', clickPopular);
+    $inputSearch.addEventListener('keyup', search);
 
-    return { $el, listList, sort }
+    return { $el, listList, sort, filter }
 })(timelineContent.$el.firstElementChild, timeline.url );
 //grid
 
@@ -282,6 +307,7 @@ const gridItem = ($parent, list) => {
     // $el = .row / list = row
     const create = () => {
         render(list);
+        $el = $parent.lastElementChild;
     }
 
     const render = (list) => {
@@ -290,7 +316,6 @@ const gridItem = ($parent, list) => {
         * arr.reduce(callback, [initialValue]) : accumulator(누산기), currentValue(현재값) -> 현재 data값을 넣은 html 누간
         */
         const html = list.reduce((html, data) => { 
-            // 이미지(/1.jpg)가 없을 경우 undefined 대신 빈텍스트 넣는다.
             const img = (data.img || '') && `
                 <a href="javascript:;">
                     <div class="eLAPa">
@@ -306,7 +331,7 @@ const gridItem = ($parent, list) => {
             return html;
         }, '');
         
-        $el.insertAdjacentHTML('beforeend', `
+        $parent.insertAdjacentHTML('beforeend', `
             <div class="row Nnq7C weEfm">
                 ${html}
             </div>
@@ -316,7 +341,6 @@ const gridItem = ($parent, list) => {
     return { $el } //row
 };
 
-// console.log(gridWrap.$el.lastElementChild) //grid-wrap
-gridWrap.listList.forEach(list => { gridItem(gridWrap.$el.lastElementChild, list); });
-
+grid.listList.forEach(list => { gridItem(grid.$el.lastElementChild.firstElementChild, list); });
+console.log("-----------------------")
 })();
