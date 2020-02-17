@@ -14,12 +14,13 @@ const common = (() => {
     return { IMG_PATH, fetchApiData }
 })();
 
-const Root = (selector) => {
+const Root = (selector) => { //main, 아래서 create() 호출
     let $el;
     let $page;
 
     const create = () => {
-        $el = document.querySelector(selector);
+        // selector, $el = main
+        $el = document.querySelector(selector); //main (>div(v9tJq) (userinfo(div) + 탭(fx7hk) + 타임라인(_2z6nI) ))
         $page = Timeline($el);
         $page.create();
     }
@@ -31,7 +32,7 @@ const Root = (selector) => {
     return { $el, create, destroy }
 };
 
-const Timeline = ($parent) => {
+const Timeline = ($parent) => { //$parent = main
     const URL = 'https://my-json-server.typicode.com/it-crafts/lesson/timeline/';
     let $el;
     let $profile;
@@ -41,6 +42,7 @@ const Timeline = ($parent) => {
         render();
         $el = $parent.firstElementChild;
         const [ totalPage, profileData ] = await fetch();
+        //부모 컴포넌트 내부에서 자식 컴포넌트 생성 (컴포넌트간 결합 발생)
         $profile = TimelineProfile($el, profileData);
         $profile.create();
         $content = TimelineContent($el, URL, profileData, totalPage);
@@ -139,6 +141,7 @@ const TimelineProfile = ($parent, profileData = {}) => {
     return { $el, create, destroy }
 };
 
+//$content = TimelineContent($el(v9tJq), URL, profileData, totalPage);
 const TimelineContent = ($parent, url = '', profileData = {}, totalPage = 1) => {
     let $el;
     let $feed;
@@ -147,26 +150,31 @@ const TimelineContent = ($parent, url = '', profileData = {}, totalPage = 1) => 
     const dataList = [];
 
     const create = async () => {
+        console.log("1. create")
         render();
-        $el = $parent.lastElementChild;
+        $el = $parent.lastElementChild; //v9tJq, fx7hk(탭)
         const pageDataList = await fetch();
         $feed = Feed($el.firstElementChild, profileData, pageDataList);
         $feed.create();
         initInfiniteScroll();
+        changeLazyImg();
     }
 
     const destroy = () => {
+        console.log("destroy")
         $feed && $feed.destroy();
         $parent.removeChild($el);
     }
 
     const fetch = async () => {
+        console.log("2. fetch")
         const pageDataList = await common.fetchApiData(url, ++page);
         dataList.push(pageDataList);
         return pageDataList;
     }
 
     const initInfiniteScroll = () => {
+        console.log("3. initInfiniteScroll")
         const $loading = $el.lastElementChild;
         const io = new IntersectionObserver((entryList, observer) => {
             entryList.forEach(async entry => {
@@ -176,12 +184,30 @@ const TimelineContent = ($parent, url = '', profileData = {}, totalPage = 1) => 
                     observer.unobserve(entry.target);
                     $loading.style.display = 'none';
                 }
-            }); // rootMargin 미동작 (인스타그램에서 자체적으로 막아놓은 것 같기도 함)
-        });
+            });
+        }, { rootMargin: innerHeight + 'px' });
         io.observe($loading);
     }
 
+    const changeLazyImg = () => {
+        console.log("4. changeLazyImg")
+        const $img = $el.lastElementChild.querySelector('FFVAD'); //$parent.children.querySelector('.FFVAD')
+        
+        const io = new IntersectionObserver((entryList, observer) => {
+            entryList.forEach(async entry => {
+                if(entry.isIntersecting) {
+                    observer.unobserve(entry.target);
+                    console.log("이미지 교체")
+                }else{
+                    return;
+                }
+            });
+        }, { rootMargin: innerHeight + 'px' });
+        io.observe($img);
+    }
+
     const ajaxMore = async () => {
+        console.log("4. (다음페이지부를때) ajaxMore -> fetch")
         const pageDataList = await fetch();
         $feed && $feed.addFeedItems(profileData, pageDataList);
     }
@@ -206,7 +232,8 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
     const $elList = [];
 
     const create = () => {
-        addFeedItems(profileData, pageDataList);
+        console.log("1.feed create")
+        addFeedItems(profileData, pageDataList); //12개씩
     }
 
     const destroy = () => {
@@ -214,10 +241,13 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
     }
 
     const addFeedItems = (profileData = {}, pageDataList = []) => {
+        console.log("3.feed addFeedItems")
         const firstIndex = $parent.children.length;
         render(profileData, pageDataList);
-        $elList.push(...[].slice.call($parent.children, firstIndex));
+        $elList.push(...[].slice.call($parent.children, firstIndex)); //리스트얕은복사. 12개아이템, 0    
     }
+
+
 
     const render = (profileData, pageDataList) => {
         const html = pageDataList.reduce((html, data) => {
