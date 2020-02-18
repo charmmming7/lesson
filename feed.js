@@ -14,7 +14,7 @@ const common = (() => {
     return { IMG_PATH, fetchApiData }
 })();
 
-const Root = (selector) => { //main, 아래서 create() 호출
+const Root = (selector) => {
     let $el;
     let $page;
 
@@ -150,31 +150,26 @@ const TimelineContent = ($parent, url = '', profileData = {}, totalPage = 1) => 
     const dataList = [];
 
     const create = async () => {
-        console.log("1. create")
         render();
         $el = $parent.lastElementChild; //v9tJq, fx7hk(탭)
         const pageDataList = await fetch();
         $feed = Feed($el.firstElementChild, profileData, pageDataList);
         $feed.create();
         initInfiniteScroll();
-        changeLazyImg();
     }
 
     const destroy = () => {
-        console.log("destroy")
         $feed && $feed.destroy();
         $parent.removeChild($el);
     }
 
     const fetch = async () => {
-        console.log("2. fetch")
         const pageDataList = await common.fetchApiData(url, ++page);
         dataList.push(pageDataList);
         return pageDataList;
     }
 
     const initInfiniteScroll = () => {
-        console.log("3. initInfiniteScroll")
         const $loading = $el.lastElementChild;
         const io = new IntersectionObserver((entryList, observer) => {
             entryList.forEach(async entry => {
@@ -189,25 +184,7 @@ const TimelineContent = ($parent, url = '', profileData = {}, totalPage = 1) => 
         io.observe($loading);
     }
 
-    const changeLazyImg = () => {
-        console.log("4. changeLazyImg")
-        const $img = $el.lastElementChild.querySelector('FFVAD'); //$parent.children.querySelector('.FFVAD')
-        
-        const io = new IntersectionObserver((entryList, observer) => {
-            entryList.forEach(async entry => {
-                if(entry.isIntersecting) {
-                    observer.unobserve(entry.target);
-                    console.log("이미지 교체")
-                }else{
-                    return;
-                }
-            });
-        }, { rootMargin: innerHeight + 'px' });
-        io.observe($img);
-    }
-
     const ajaxMore = async () => {
-        console.log("4. (다음페이지부를때) ajaxMore -> fetch")
         const pageDataList = await fetch();
         $feed && $feed.addFeedItems(profileData, pageDataList);
     }
@@ -232,7 +209,6 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
     const $elList = [];
 
     const create = () => {
-        console.log("1.feed create")
         addFeedItems(profileData, pageDataList); //12개씩
     }
 
@@ -241,13 +217,41 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
     }
 
     const addFeedItems = (profileData = {}, pageDataList = []) => {
-        console.log("3.feed addFeedItems")
         const firstIndex = $parent.children.length;
         render(profileData, pageDataList);
-        $elList.push(...[].slice.call($parent.children, firstIndex)); //리스트얕은복사. 12개아이템, 0    
+        // call(): 인수목록(arg array)을 받는다. = $parent.children
+        // Array.prototype.slice.call = [].slice.call
+        $elList.push(...[].slice.call($parent.children, firstIndex)); //리스트얕은복사. 12개아이템, 0
+        lazyLoad();
     }
 
+    const lazyLoad = () => {
+        const $imgs = $parent.querySelectorAll('[data-src]');
 
+        const lazyLoadImage = (entryList, observer) => {
+            entryList.forEach(async entry => {
+                const { target } = entry;
+                if(entry.isIntersecting) {
+                    target.src = target.dataset.src;                    
+                }else{
+                    return;
+                }
+                if(target == entryList[entryList.length]){
+                    // XXX 이때 unobserve를 해주는게 맞는지 잘 모르겠습니다.
+                    io.unobserve($img); 
+                }
+            });
+        }
+        $imgs.forEach($img => { 
+            let imgHeight = 0 || $img.clientHeight;
+            const lazyLoadOption = {
+                root: null,
+                rootMargin: imgHeight + 'px 0px'
+            };
+            const io = new IntersectionObserver(lazyLoadImage, lazyLoadOption);
+            io.observe($img);             
+        });    
+    }
 
     const render = (profileData, pageDataList) => {
         const html = pageDataList.reduce((html, data) => {
@@ -317,7 +321,7 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
         $parent.insertAdjacentHTML('beforeend', html);
     }
 
-    return { $elList, create, destroy, addFeedItems }
+    return { $elList, create, destroy, addFeedItems, Feed }
 };
 
 const root = Root('main');
