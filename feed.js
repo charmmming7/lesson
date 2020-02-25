@@ -207,8 +207,18 @@ const TimelineContent = ($parent, url = '', profileData = {}, totalPage = 1) => 
 // TODO 뷰 역할인 Feed 컴포넌트에 이미지 레이지로드 기능 추가 - initInfiniteScroll 히스토리 참고
 const Feed = ($parent, profileData = {}, pageDataList = []) => {
     const $elList = [];
+    let io;
 
     const create = () => {
+        /* TODO 지금은 옵저버 객체는 하나만 있으면 충분할 것 같습니다
+        Feed의 부하 객체이며, 보라고 한 엘리먼트 들을 바라보고 있다가 보이면 시킨일(콜백)을 합니다
+        option 객체는 뗄 때 이득이 별로 없어서 없앴는데, 요건 개인의 취향대로 하세요 */
+        io = new IntersectionObserver(lazyLoadImage, {
+            /* COMMENT 마진을 위해 엘리먼트의 clientHeight를 계속 호출하면 그 때 마다 계속 리플로우가 트리거됩니다
+            여기서는 부모 엘리먼트의 가로가 곧 이미지의 세로이므로, 생성시에 그 사이즈를 빌려쓰면 좋을 것 같습니다
+            참고로, 모바일 가로/세로 전환시나 창크기 변경시 마진값 업데이트가 필요하나, 큰 이슈는 없을 것 같습니다 */
+            rootMargin: $parent.clientWidth + 'px 0px'
+        });
         addFeedItems(profileData, pageDataList); //12개씩
     }
 
@@ -222,35 +232,38 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
         // call(): 인수목록(arg array)을 받는다. = $parent.children
         // Array.prototype.slice.call = [].slice.call
         $elList.push(...[].slice.call($parent.children, firstIndex)); //리스트얕은복사. 12개아이템, 0
-        lazyLoad();
+        observeLazyImgs();
     }
 
-    const lazyLoad = () => {
+    const observeLazyImgs = () => {
+        /* FIXME 부모 컴포넌트에서 Feed 이외에 다른 컴포넌트도 모두 룩업대상이 됩니다
+        선택자가 특이해서 잘 발생하지 않을 케이스라 문제가 될 경우는 많지 않겠지만
+        여기서는 추가한 엘리먼트를 돌면서 뽑는 게 좋을 것 같습니다 (속도도 이 쪽이 더 빠릅니다) */
+        /* BUG 매 번 전체 대상의 [data-src]를 긁고 있기 때문에,
+        2페이지, 3페이지, ... addFeedItems 호출 시에 이전페이지 이미지들이 다시 옵저버에 등록됩니다
+        추가한 엘리먼트에서 뽑는 방법이 있을 것 같습니다 (push 하기 전에 미리 뽑아두고?)
+        일단 지금은 data 속성 자체를 없애도록 방어처리만 해두었습니다 */
         const $imgs = $parent.querySelectorAll('[data-src]');
+        $imgs.forEach($img => io.observe($img)); // 옵저버한테 바라볼 이미지들을 추가로 알려줌
+    }
 
-        const lazyLoadImage = (entryList, observer) => {
-            entryList.forEach(async entry => {
-                const { target } = entry;
-                if(entry.isIntersecting) {
-                    target.src = target.dataset.src;                    
-                }else{
-                    return;
-                }
-                if(target == entryList[entryList.length]){
-                    // XXX 이때 unobserve를 해주는게 맞는지 잘 모르겠습니다.
-                    io.unobserve($img); 
-                }
-            });
-        }
-        $imgs.forEach($img => { 
-            let imgHeight = 0 || $img.clientHeight;
-            const lazyLoadOption = {
-                root: null,
-                rootMargin: imgHeight + 'px 0px'
-            };
-            const io = new IntersectionObserver(lazyLoadImage, lazyLoadOption);
-            io.observe($img);             
-        });    
+    const lazyLoadImage = (entryList, observer) => {
+        entryList.forEach(async entry => {
+            /* TODO 분기가 필요한 케이스라면 두 가지 패턴을 기준으로 생각하세요
+            1) 특정한 상태를 감시하고 있다가 로직을 return으로 튕겨내는 예외로직
+            2) 특정한 상태에만 수행되는 예외로직 (빼도 위아래 로직에 영향이 없는)
+            위아래 로직과 결합이 있다면 그건 예외로직이 아니라 메인로직 입니다
+            또는 함수형으로 사고한다면 위의 1)과 2)를 아예 반대로 짤 수도 있습니다
+            반대로 메인로직을 케이스에 넣는 형태로.. 어느 쪽으로 가든 구조는 맞춰주세요 */
+            if(!entry.isIntersecting) {
+                return; // 로직을 실행하지 않을 케이스를 미리 튕겨낸다 (이제 아래로직을 짤 때는 여기를 고려할 필요 없음)
+            }
+            
+            const { target } = entry;
+            target.src = target.dataset.src;
+            delete target.dataset.src;
+            io.unobserve(target); // 할 일 끝냈니까 이 이미지는 바라보기 종료
+        });
     }
 
     const render = (profileData, pageDataList) => {
@@ -321,7 +334,7 @@ const Feed = ($parent, profileData = {}, pageDataList = []) => {
         $parent.insertAdjacentHTML('beforeend', html);
     }
 
-    return { $elList, create, destroy, addFeedItems, Feed }
+    return { $elList, create, destroy, addFeedItems }
 };
 
 const root = Root('main');
